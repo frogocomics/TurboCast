@@ -22,7 +22,7 @@ The two inputs are combined for each time step and fed into a double-layer resid
 - [/src/model/outputs](./src/model/outputs) is the location of all model outputs
 
 ### Data Fetching
-Although the processed weather station data is already available in the [src/data/weatherstation/processed](./src/data/weatherstation/processed)
+Although the processed weather station data is already available in the [src/data/weather/processed](./src/data/weather/processed)
 directory, users have the option of regenerating the data. Due to large file sizes, processed radar data is available
 [here](https://drive.google.com/drive/folders/1CfuyRakYHYgU_xRCW8G-NbUnJxl5FEvS?usp=sharing) and should be placed in
 [src/data/radar/processed](./src/data/radar/processed) folder.
@@ -102,9 +102,9 @@ model performance. Four models are tested:
 
 ### Data Analysis and Visuals
 Exploratory analysis code is provided in the Jupyter notebook format in the [EDA folder](./src/data/eda).
-- ```EDA_spatial.ipynb```: Spatial EDA: Correlation matrix analysis, PCA/clustering analysis, radar/station correlation analysis
-- ```EDA_temporal.ipynb```: Temporal EDA: Time series decomposition, lagged correlation analysis, autoregression analysis
-- ```EDA_weather_processing.ipynb```: EDA to inform what date range to use before missing data imputation; also includes visualizations for the PowerPoint presenting, including a map of all the weather station locations.
+- ```EDA_spatial.ipynb```: Spatial EDA notebook containing correlation matrix analysis, PCA/clustering analysis, radar/station correlation analysis
+- ```EDA_temporal.ipynb```: Temporal EDA notebook containing time series decomposition, lagged correlation analysis, autoregression analysis
+- ```EDA_weather_processing.ipynb```: EDA to inform what date range to use before missing data imputation; also includes visualizations for the PowerPoint presentation, including a map of all the weather station locations.
 
 After model training and evaluation code is run, ```visualize_model.ipynb``` in the [model folder](./src/model) is used
 to generate visualizations for model performance. Six visualizations are generated:
