@@ -9,7 +9,10 @@ from rnn_utils import WeatherDataset, CNN, Model
 
 
 def get_test_loss(model, dataloader):
-    model.eval()
+    """
+    Get the test loss for a model and dataloader.
+    """
+    model.eval()  # Set model to evaluation mode
     with torch.no_grad():
         criterion = nn.MSELoss()
         total_loss = 0
@@ -50,6 +53,7 @@ if __name__ == '__main__':
     state = torch.load('outputs/trained_model.pth')
     model.load_state_dict(state)
 
+    # Create dataset and dataloader
     test_dataset = WeatherDataset(scaled_test_df, 6, 2, image_tensor, exclude_columns)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -114,6 +118,7 @@ if __name__ == '__main__':
 
     np.save('outputs/cnn_output1.npy', intermediate_images)
 
+    # 3. Get test features and targets and save
     # Saving test inputs and outputs
     print('Saving test inputs and outputs')
 
@@ -128,7 +133,6 @@ if __name__ == '__main__':
     with torch.no_grad():
 
         for i, (weather_input, image_input, target) in enumerate(test_dataloader):
-            # print(weather_input.shape, image_input.shape, target.shape)
             # Forward pass, backward pass, and optimize
             output = model(weather_input, image_input)
             inputs.append(weather_input)

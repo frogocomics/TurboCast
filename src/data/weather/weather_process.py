@@ -78,6 +78,10 @@ def impute(dataframes, distances_array, feature):
 
 
 def replace_outliers_with_nan(weather_station):
+    """
+    Convenience function to replace precipitation outliers (>100 mm/hr) with NAs, so that
+    we can impute it.
+    """
     column = weather_station['PRECIP_AMOUNT']
     lower_bound = 0
     upper_bound = 100
@@ -87,6 +91,9 @@ def replace_outliers_with_nan(weather_station):
 
 
 def vapor_pressure_water(temp):
+    """
+    Get the saturated vapor pressure of water in kPa, given a temperature.
+    """
     # Using Wagner equation
     T = temp + 273.15  # Convert temperature to Kelvin
     A = 7.89750

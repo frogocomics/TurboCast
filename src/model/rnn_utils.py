@@ -49,6 +49,10 @@ def pre_split_feature_engineering(df, weather_images):
 
 
 def split_year_into_chunks(year):
+    """
+    Get validation chunks for a given year, as [[start, end], [start, end], etc.].
+    """
+
     # Define the start date and end date for the year
     start_date = datetime(year, 1, 1)
     end_date = datetime(year, 12, 31, 23, 59, 59)  # Set end time to the last second of the year
@@ -79,6 +83,10 @@ def split_year_into_chunks(year):
 
 
 def post_feature_engineering(data, set_type, scaler, pca, kmeans, exclude_columns, numerical_columns):
+    """
+    Function for additional feature engineering.
+    """
+
     data = data.copy()
 
     for column in exclude_columns:
@@ -93,8 +101,6 @@ def post_feature_engineering(data, set_type, scaler, pca, kmeans, exclude_column
 
     precip = np.array(precip).T
 
-    # print(len(data))
-
     if set_type == 'Training':
         data[numerical_columns] = scaler.fit_transform(data[numerical_columns])
         transformed_precip = pca.fit_transform(precip)
@@ -104,18 +110,9 @@ def post_feature_engineering(data, set_type, scaler, pca, kmeans, exclude_column
         transformed_precip = pca.transform(precip)
         precip_label = kmeans.predict(transformed_precip)
 
-    # print(len(data))
-
     # Perform one-hot encoding
     one_hot_encoded = pd.get_dummies(precip_label, prefix='Cluster')
     one_hot_encoded.index = data.index
-
-    # print(len(one_hot_encoded))
-    # print(one_hot_encoded.isna().sum())
-
-    # sys.exit(0)
-
-    # print(len(one_hot_encoded))
 
     # Add the one-hot encoded columns to the original DataFrame
     data = pd.concat([data, one_hot_encoded], axis=1)
@@ -124,6 +121,11 @@ def post_feature_engineering(data, set_type, scaler, pca, kmeans, exclude_column
 
 
 def get_scaled_dfs():
+    """
+    Function to load all data and process it into a scaled train set, validation set, and test set.
+    """
+
+    # Load all weather stations
     weather_stations = [
         pd.read_csv('../data/weather/processed/' + file, parse_dates=['UTC_DATE'], index_col='UTC_DATE')
         .drop(columns=['Unnamed: 0', 'WIND_SPEED', 'WIND_DIRECTION', 'VAPOR_PRESSURE', 'x', 'y', 'STATION_NAME'])
@@ -132,6 +134,7 @@ def get_scaled_dfs():
 
     station_names = [file[:-4] for file in os.listdir('../data/weather/processed')]
 
+    # Load all weather images
     weather_images = pd.read_csv('../data/radar/processed/image_dates.csv', parse_dates=['UTC_DATE']).iloc[
                      24510:].reset_index(drop=True)
 
@@ -144,9 +147,9 @@ def get_scaled_dfs():
 
         df = df.copy()
 
-        df['RELATIVE_HUMIDITY'] = df['RELATIVE_HUMIDITY'] / 100
-        df['STATION_PRESSURE'] = df['STATION_PRESSURE'] / 101.325
-        df['PRECIP_AMOUNT'] = df['PRECIP_AMOUNT'] / 100
+        df['RELATIVE_HUMIDITY'] = df['RELATIVE_HUMIDITY'] / 100    # Normalize between 0 and 1
+        df['STATION_PRESSURE'] = df['STATION_PRESSURE'] / 101.325  # Normalize to atm
+        df['PRECIP_AMOUNT'] = df['PRECIP_AMOUNT'] / 100            # Arbitrary scale
 
         for column in df.columns:
             if column != 'UTC_DATE':  # Avoid renaming the UTC_DATE column
@@ -210,6 +213,7 @@ def get_scaled_dfs():
     data_scaler = StandardScaler()
     exclude_columns = ['UTC_DATE', 'IMAGE_INDEX']
 
+    # Apply standard scaler to some features
     scaled_train_df = post_feature_engineering(train_data, 'Training', data_scaler, pca, kmeans,
                                                exclude_columns, numerical_columns)
     scaled_validation_df = post_feature_engineering(validation_data, 'Validation', data_scaler, pca, kmeans,
@@ -253,6 +257,9 @@ class WeatherDataset(Dataset):
         # print(self.image_idx)
 
     def preprocess(self):
+        """
+        Preprocess the time series by getting a list of valid indices.
+        """
         indices = []
 
         for start_idx in range(0, len(self.data) - self.input_hours + 1):
@@ -272,9 +279,15 @@ class WeatherDataset(Dataset):
         return indices
 
     def __len__(self):
+        """
+        Get the length of the dataset.
+        """
         return len(self.indices)
 
     def __getitem__(self, idx):
+        """
+        Get entries from the dataset.
+        """
         start_idx = self.indices[idx]
         end_idx1 = start_idx + self.input_hours
         end_idx2 = end_idx1 + self.target_hours
@@ -296,7 +309,9 @@ class CNN(nn.Module):
         self.pool2 = nn.MaxPool2d(kernel_size=4, stride=4)
 
     def forward(self, x):
-        # Define the forward pass for the CNN
+        """
+        Forward pass for the CNN.
+        """
         x = F.relu(self.bn1(self.conv1(x)))
         x = self.pool1(x)
         x = F.relu(self.bn2(self.conv2(x)))
@@ -328,16 +343,19 @@ class Model(nn.Module):
             self.rnn = nn.RNN(hidden_dim, hidden_dim, num_layers, batch_first=True)
             self.rnn2 = nn.RNN(hidden_dim, hidden_dim, num_layers, batch_first=True)
 
-        self.fc2 = nn.Linear(66, 32)
-        self.bn2 = nn.BatchNorm1d(32)
+        self.fc1 = nn.Linear(66, 32)
+        self.bn1 = nn.BatchNorm1d(32)
 
-        self.fc3 = nn.Linear(288, hidden_dim)
-        self.bn3 = nn.BatchNorm1d(hidden_dim)
+        self.fc2 = nn.Linear(288, hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
 
         self.fc_out1 = nn.Linear(hidden_dim, 8)
-        self.fc_out3 = nn.Linear(8, 2)
+        self.fc_out2 = nn.Linear(8, 2)
 
     def forward(self, time_series_data, images):
+        """
+        Forward pass for the GRU.
+        """
 
         # Check for NaN in inputs
         assert not torch.isnan(time_series_data).any(), "NaNs in time_series_data"
@@ -350,26 +368,19 @@ class Model(nn.Module):
         for time_step in range(time_series_data.size(1)):
             hourly_radar = images[:, time_step, :, :]
             hourly_radar = hourly_radar[:, None, :, :]
-            # print('hourly_radar Shape:', hourly_radar.shape)
             cnn_output = self.cnn(hourly_radar)
-            # assert not torch.isnan(cnn_output).any(), "NaNs in cnn_output"
 
             hourly_data = time_series_data[:, time_step, :]
-            # print(hourly_data.shape)
-            hourly_data = F.relu(self.bn2(self.fc2(hourly_data)))
-
-            # print('hourly_data Shape:', hourly_data.shape)
+            hourly_data = F.relu(self.bn1(self.fc1(hourly_data)))
 
             combined_data = torch.cat((hourly_data, cnn_output), dim=1)
-            combined_data = F.relu(self.bn3(self.fc3(combined_data)))
+            combined_data = F.relu(self.bn2(self.fc2(combined_data)))
 
-            # print('Combined Data Shape:', combined_data.shape)
             assert not torch.isnan(combined_data).any(), "NaNs in combined_data"
 
             combined_outputs.append(combined_data)
 
         combined_outputs_tensor = torch.stack(combined_outputs).reshape(batches, -1, self.hidden_dim)
-        # print('Combined Outputs Tensor Shape:', combined_outputs_tensor.shape)
         assert not torch.isnan(combined_outputs_tensor).any(), "NaNs in combined_outputs_tensor"
 
         # Initialize hidden and cell states
@@ -399,7 +410,6 @@ class Model(nn.Module):
         # Introduce residual connection
         output2 = torch.add(output2, output)
 
-        # print('RNN Output Shape:', output.shape)
         assert not torch.isnan(output2).any(), "NaNs in RNN output"
 
         last_time_step_output = output2[:, -1, :]
@@ -408,8 +418,7 @@ class Model(nn.Module):
 
         out = F.relu(self.fc_out1(last_time_step_output))
 
-        out = self.fc_out3(out)
-        # print('Final Output Shape:', out.shape)
+        out = self.fc_out2(out)
         assert not torch.isnan(out).any(), "NaNs in final output"
 
         return out

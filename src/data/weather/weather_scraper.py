@@ -4,12 +4,10 @@ import multiprocessing
 import os
 import time
 
-import numpy as np
+import pandas as pd
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-
-import pandas as pd
 
 import validation_utils
 

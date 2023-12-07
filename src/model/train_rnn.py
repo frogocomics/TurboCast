@@ -9,6 +9,9 @@ from rnn_utils import WeatherDataset, CNN, Model
 
 
 def train_model(model, train_loader, val_loader, epochs):
+    """
+    Train the model and evaluate the model on the validation set for each epoch.
+    """
 
     # Define the Loss function and optimizer
     criterion = nn.MSELoss()
@@ -32,7 +35,7 @@ def train_model(model, train_loader, val_loader, epochs):
             loss = criterion(outputs, target)
             loss.backward()
 
-            # Gradient clipping
+            # Gradient clipping to prevent exploding gradients
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             total_train_loss += loss.item()
@@ -53,6 +56,7 @@ def train_model(model, train_loader, val_loader, epochs):
             print(f'Epoch {epoch + 1}:', total_val_loss / len(val_loader))
             val_losses.append(total_val_loss / len(val_loader))
 
+    # Return train and val losses to plot learning curve later
     return np.array(train_losses), np.array(val_losses)
 
 
@@ -74,10 +78,12 @@ if __name__ == '__main__':
     exclude_columns = ['UTC_DATE', 'IMAGE_INDEX']
     batch_size = 256
 
+    # Create datasets
     train_dataset = WeatherDataset(scaled_train_df, input_hours, target_hours, image_tensor, exclude_columns)
     val_dataset = WeatherDataset(scaled_validation_df, input_hours, target_hours, image_tensor, exclude_columns)
     test_dataset = WeatherDataset(scaled_test_df, input_hours, target_hours, image_tensor, exclude_columns)
 
+    # Create dataloaders
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
